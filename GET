@@ -1,0 +1,167 @@
+#!/bin/bash
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Copyright: Baptiste Assmann <bedis9@gmail.com>
+
+# curl wrapper in Bash
+# 
+# simple curl wrapper which allows setting most commonly used option while
+# not preventing the user to append his own one.
+# Can be used to GET content but also to manipulate JSON queries, with JPOST,
+# JGET, JDELETE, JPUT, JUP/JUPLOAD (for upload)
+#
+# more help here: https://github.com/bedis/curlwrapperinbash
+
+
+if [ -n "$DEBUG" ]; then
+  set -x
+fi
+
+if [ "$1" = "--install" ]; then
+  set -e
+
+  # check dependency on jq
+  jq >/dev/null 2>&1
+  if [ $? -eq 127 ]; then
+    echo "jq can't be found"
+    exit 1
+  fi
+
+  # install the script in $HOME/bin
+  if [ ! -d $HOME/bin ]; then
+    echo "$HOME/bin does not exist"
+    exit 1
+  fi
+  if [ -f $HOME/bin/GET ]; then
+    echo "$HOME/bin/GET already exists"
+    exit 1
+  fi
+  cp $0 $HOME/bin/GET
+
+  # set the symlinks
+  cd $HOME/bin
+  ln -s GET JDELETE
+  ln -s GET JGET
+  ln -s GET JPOST
+  ln -s GET JPUT
+  ln -s GET JUP
+  ln -s GET JUPLOAD
+  cd $OLDPATH
+  exit 0
+fi
+
+# update curl's write-out based on request protocol
+CHECK=$(echo $@ | fgrep -c -i https)
+if [ $CHECK -eq 1 ]; then
+OUTPUT="Remote IP: %{remote_ip}
+SSL verify result: %{ssl_verify_result}
+Timers:
+  DNS lookup:   \t%{time_namelookup}
+  TCP handshake:\t%{time_connect}
+  SSL handshake:\t%{time_appconnect}
+  Total:        \t%{time_total}
+
+"
+else
+OUTPUT="Remote IP: %{remote_ip}
+Timers:
+  DNS lookup:   \t%{time_namelookup}
+  TCP handshake:\t%{time_connect}
+  Total:        \t%{time_total}
+"
+fi
+
+CHECK=$(echo $@ | fgrep -c -i -- '-o ')
+if [ $CHECK -eq 0 ]; then
+  CONTENT_OUPUT="-o /dev/null"
+else
+  CONTENT_OUPUT=""
+fi
+
+IFS=µ
+
+case ${0##*/} in
+  JDELETE)
+    TMP=$(tempfile)
+    METHOD=${0##*/J}
+    echo
+    echo -e "\e[1mResponse headers:\e[0m"
+    curl --silent --insecure --dump-header - --request $METHOD \
+        --header "Content-Type:application/json" \
+        --output $TMP $@
+    echo -e "\e[1mJSON content:\e[0m"
+    jq . $TMP
+    jq --monochrome-output . $TMP > out.json
+    rm -f $TMP
+    ;;
+
+  JPUT | JPOST)
+    if [ ! -f in.json ]; then
+      echo "${0##*/} reads its json content from 'in.json'"
+      exit 1
+    fi
+    TMP=$(tempfile)
+    METHOD=${0##*/J}
+    echo
+    echo -e "\e[1mResponse headers:\e[0m"
+    curl --silent --insecure --dump-header - --request $METHOD --data @in.json \
+        --header 'Content-Type:application/json' \
+        --output $TMP $@
+    echo -e "\e[1mJSON content:\e[0m"
+    jq . $TMP
+    jq --monochrome-output . $TMP > out.json
+    rm -f $TMP
+    ;;
+
+  JUP | JUPLOAD)
+    if [ ! -f in.raw ]; then
+      echo "${0##*/} reads its json from 'in.raw'"
+      exit 1
+    fi
+    TMP=$(tempfile)
+    METHOD="PUT"
+    echo
+    echo -e "\e[1mResponse headers:\e[0m"
+    curl --silent --insecure --dump-header - --request $METHOD --data-binary @in.raw \
+        --header 'Content-Type:application/octet-stream' \
+        --output $TMP $@
+    echo -e "\e[1mJSON content:\e[0m"
+    jq . $TMP
+    jq --monochrome-output . $TMP > out.json
+    rm -f $TMP
+    ;;
+
+  JGET)
+    TMP=$(tempfile)
+    echo
+    echo -e "\e[1mResponse headers:\e[0m"
+    curl --silent --insecure --dump-header - --output $TMP $@
+    echo -e "\e[1mJSON content:\e[0m"
+    jq . $TMP
+    jq --monochrome-output . $TMP > out.json
+    rm -f $TMP
+    ;;
+
+  *)
+    echo
+    echo -e "\e[1mResponse headers:\e[0m"
+    echo -e $(curl $CONTENT_OUPUT --silent --insecure --dump-header - \
+              --write-out "\n\n$OUTPUT" \
+              $@ | sed 's/Remote IP\|Timers\|SSL verify result\|DNS lookup\|TCP handshake\|SSL handshake\|Total/\\e[1m&\\e[0m/')
+    echo
+  ;;
+
+esac
+
