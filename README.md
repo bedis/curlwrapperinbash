@@ -166,3 +166,7 @@ parse error: Invalid numeric literal at line 1, column 7
 ### JPOST
 This command execute a POST on a JSON/REST API endpoint. It takes the JSON content from the file **in.json** in your current $PATH.
 
+## TODO
+Pending devs:
+* support more HTTP methods (instead of ```GET -X DELETE ...```, run ```DELETE ....```)
+* add a **--force-install** option to force copy of the script itself and creation of symlinks
