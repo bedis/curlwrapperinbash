@@ -34,7 +34,7 @@ Timers:
 Simply download GET bash script and run:
   ```
   chmod +x GET
-  GET --install
+  ./GET --install
   ```
 
 This step will install GET in your $HOME/bin directory and also create the relevent symlinks.
