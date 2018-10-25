@@ -31,7 +31,7 @@ Timers:
 
 
 ## installation
-Simply download GET bash script and run:
+Simply download [GET](https://raw.githubusercontent.com/bedis/curlwrapperinbash/master/GET) bash script and run:
   ```
   chmod +x GET
   ./GET --install
