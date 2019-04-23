@@ -108,17 +108,26 @@ case ${0##*/} in
     ;;
 
   JPUT | JPOST)
-    if [ ! -f in.json ]; then
-      echo "${0##*/} reads its json content from 'in.json'"
+    CHECKD=$(echo $@ | fgrep -c -i -- '--d ')
+    CHECKDATA=$(echo $@ | fgrep -c -i -- '--data ')
+    DATA=""
+    if [ $CHECKD -eq 0 -a $CHECKDATA -eq 0 -a ! -f in.json ]; then
+      echo "${0##*/} reads its json content from 'in.json' or from '-d' or '--data' flags"
       exit 1
     fi
     TMP=$(tempfile)
     METHOD=${0##*/J}
     echo
     echo -e "\e[1mResponse headers:\e[0m"
-    curl --silent --insecure --dump-header - --request $METHOD --data @in.json \
-        --header 'Content-Type:application/json' \
-        --output $TMP $@
+    if [ $CHECKD -eq 0 -a $CHECKDATA -eq 0 ]; then
+      curl --silent --insecure --dump-header - --request $METHOD --data @in.json \
+          --header 'Content-Type:application/json' \
+          --output $TMP $@
+    else
+      curl --silent --insecure --dump-header - --request $METHOD ${DATA} \
+          --header 'Content-Type:application/json' \
+          --output $TMP $@
+    fi
     echo -e "\e[1mJSON content:\e[0m"
     jq . $TMP
     jq --monochrome-output . $TMP > out.json
