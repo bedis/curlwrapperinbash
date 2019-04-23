@@ -85,9 +85,9 @@ fi
 
 CHECK=$(echo $@ | fgrep -c -i -- '-o ')
 if [ $CHECK -eq 0 ]; then
-  CONTENT_OUPUT="-o /dev/null"
+  CONTENT_OUTPUT="-o /dev/null"
 else
-  CONTENT_OUPUT=""
+  CONTENT_OUTPUT=""
 fi
 
 IFS=µ
@@ -166,7 +166,7 @@ case ${0##*/} in
   *)
     echo
     echo -e "\e[1mResponse headers:\e[0m"
-    echo -e $(curl $CONTENT_OUPUT --silent --insecure --dump-header - \
+    echo -e $(curl $CONTENT_OUTPUT --silent --insecure --dump-header - \
               --write-out "\n\n$OUTPUT" \
               $@ | sed 's/Remote IP\|Timers\|SSL verify result\|DNS lookup\|TCP handshake\|SSL handshake\|Total/\\e[1m&\\e[0m/')
     echo
