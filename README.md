@@ -96,7 +96,7 @@ JSON content:
   {
     "ID": "ea9053c6-2458-d79f-8b0a-a39a188f774d",
     "Node": "server",
-    "Address": "10.42.42.2",
+    "Address": "10.55.42.2",
     "Datacenter": "dc1",
     "TaggedAddresses": null,
     "NodeMeta": null,
